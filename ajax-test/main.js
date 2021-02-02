@@ -1,18 +1,14 @@
-const baseUrl = "https://swapi.dev/api/";
-
-
-
-function getData(type, cb) {
+function getData (url, cb) {
     var xhr = new XMLHttpRequest();
 
-    xhr.open("GET", baseUrl+type+"/");
-    xhr.send();
-
-    xhr.onreadystatechange = function()  {
+    xhr.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
             cb(JSON.parse(this.responseText));
         }
-    };   
+    };
+
+    xhr.open("GET", url);
+    xhr.send();
 }
 
 function getTableHeaders(obj) {
@@ -21,15 +17,31 @@ function getTableHeaders(obj) {
     Object.keys(obj).forEach(function(key) {
         tableHeaders.push(`<td>${key}</td>`);
     });
-    return `<tr>${tableHeaders}</tr>`;
+
+    return `<th>${tableHeaders}</th>`;
 }
 
-function writeToDocument(type) {
-    var tableRows =[];
-    var el = document.getElementById("data");
-    el.innerHTML = " ";
+function generatePaginationButtons(next, prev) {
+    if (next && prev) {
+        return `<button onclick="writeToDocument('${prev}')">Previous</button>
+                <button onclick="writeToDocument('${next}')">Next</button>`;
+    } else if (next && !prev) {
+        return `<button onclick="writeToDocument('${next}')">Next</button>`;
+    } else if (!next && prev) {
+        return `<button onclick="writeToDocument('${prev}')">Previous</button>`;
+    }
+}
 
-    getData(type, function(data) {
+function writeToDocument(url) {
+    var tableRows = [];
+    var el = document.getElementById("data");
+
+    getData(url, function(data) {
+        var pagination = "";
+
+        if (data.next || data.previous) {
+            pagination = generatePaginationButtons(data.next, data.prev);
+        }
         data = data.results;
         var tableHeaders = getTableHeaders(data[0]);
 
@@ -38,12 +50,12 @@ function writeToDocument(type) {
 
             Object.keys(item).forEach(function(key) {
                 var rowData = item[key].toString();
-                var truncateData = rowData.substring(0, 15);
-                dataRow.push(`<td>${truncateData}</td>`);
+                var truncatedData = rowData.substring(0, 15);
+                dataRow.push(`<td>${truncatedData}</td>`);
             });
+            tableRows.push(`<tr>${dataRow}</tr>`);
+        });
 
-            tableRows.push(`<td>${dataRow}</td>`);
-        });
-            el.innerHTML = `<table>${tableHeaders}${tableRows}</table>`; 
-        });
-    }
+        el.innerHTML = `<table>${tableHeaders}${tableRows}</table>${pagination}`.replace(/,/g, "");
+    });
+}
